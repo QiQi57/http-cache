@@ -1,37 +1,45 @@
-## Welcome to GitHub Pages
+###1. ETag
+通过 ETag 验证缓存的响应
+验证令牌可实现高效的资源更新检查：资源未发生变化时不会传送任何数据。
+服务器生成并返回的随机令牌通常是文件内容的哈希值或某个其他指纹。
+使用原理：
+客户端自动在“If-None-Match” HTTP 请求标头内提供 ETag 令牌。服务器根据当前资源核对令牌。
+如果它未发生变化，服务器将返回“304 Not Modified”响应，告知浏览器缓存中的响应未发生变化，可以再延用 120 秒。请注意，您不必再次下载响应，这节约了时间和带宽。
 
-You can use the [editor on GitHub](https://github.com/QiQi57/http-cache/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+总结：
+优点：根据文件内容生成ETag，浏览器根据ETag验证是否一致来判断是否需要更新资源，
+优于last-modify （会因为文件修改时间改变，即使内容没变，也会导致重新下载资源）
+优于cache-control：max-age：120，（120s之后会去服务器重新请求最新资源，资源很可能没有改变）
+缺点：
+需要服务器端计算生成etag支持，
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+###2.cache-control 指令：
+“no-cache”：表示必须先与服务器确认返回的响应是否发生了变化，然后才能使用该响应来满足后续对同一网址的请求。
+如果存在合适的验证令牌 (ETag)，no-cache 会发起往返通信来验证缓存的响应，但如果资源未发生变化，则可避免下载。
+“no-store”：它直接禁止浏览器以及所有中间缓存存储任何版本的响应
+“public”：“public”不是必需的，因为明确的缓存信息（例如“max-age”）已表示响应是可以缓存的
+“private”：这些响应通常只为单个用户缓存，因此不允许任何中间缓存对其进行缓存。
+“max-age”：指令指定从请求的时间开始，允许获取的响应被重用的最长时间（单位：秒）“max-age=60”表示可在接下来的 60 秒缓存和重用响应。
 
-### Markdown
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+###3.缓存
+工作原理：
+浏览器发出的所有 HTTP 请求会首先路由到浏览器缓存，以确认是否缓存了可用于满足请求的有效响应。
+如果有匹配的响应，则从缓存中读取响应，这样就避免了网络延迟和传送产生的流量费用。
 
-```markdown
-Syntax highlighted code block
+sample：
+a.html no-cache 每次都获取最新
+b.js和css max-age 设置31536000（一年），文件名称中会嵌入hashcode，如果文件修改，文件名会修改，可以获取到最新资源。
+c.图片设置cache-control：max-age=86400 （一天），
 
-# Header 1
-## Header 2
-### Header 3
+###4.兼容性
+expire：http1.0
+cache-control http1.1
 
-- Bulleted
-- List
 
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/QiQi57/http-cache/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+###5.制定缓存策略，技巧和方法：
+a 确保服务器提供验证令牌 (ETag)：有了验证令牌，当服务器上的资源未发生变化时，就不需要传送相同的字节。
+b 确定中间缓存可以缓存哪些资源：对所有用户的响应完全相同的资源非常适合由 CDN 以及其他中间缓存进行缓存。
+c 为每个资源确定最佳缓存周期：不同的资源可能有不同的更新要求。为每个资源审核并确定合适的 max-age。
+d 确定最适合您的网站的缓存层次结构：您可以通过为 HTML 文档组合使用包含内容指纹的资源网址和短时间或 no-cache 周期，来控制客户端获取更新的速度。
+e 某些资源的更新比其他资源频繁,可以考虑将其代码作为单独的文件提供
