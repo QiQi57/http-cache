@@ -33,8 +33,8 @@ sample：
 - c.图片设置cache-control：max-age=86400 （一天），
 
 ### 4.兼容性
-expire：http1.0
-cache-control http1.1
+1. expire：http1.0
+2. cache-control http1.1
 
 
 ### 5.制定缓存策略，技巧和方法：
